@@ -1,0 +1,15 @@
+@if(chatService.currentOpenChat()) {
+    <div class="p-5">
+        <div class="flex flex-col text-center items-center mt-3">
+            <img class="rounded-full mb-4 w-44 h-44 object-cover" [src]="chatService.currentOpenChat()?.profilePicture || 'unknownperson.svg'" alt="profile pic">
+            <div class="ml-3">
+                <p class="text-lg font-semibold">
+                    {{chatService.currentOpenChat()?.fullName | titlecase}}
+                </p>
+                <p class="text-sm text-gray-500">
+                    {{chatService.currentOpenChat()?.userName}}
+                </p>
+            </div>
+        </div>
+    </div>
+}
