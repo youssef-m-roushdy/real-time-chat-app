@@ -1,28 +1,34 @@
-import { inject, Injectable, signal } from '@angular/core';
-import { User } from '../models/user';
-import { AuthService } from './auth.service';
+import { inject, Injectable, signal } from "@angular/core";
+import { User } from "../models/user";
+import { AuthService } from "./auth.service";
 import {
   HubConnection,
   HubConnectionBuilder,
   HubConnectionState,
-} from '@microsoft/signalr';
-import { Message } from '../models/message';
+} from "@microsoft/signalr";
+import { Message } from "../models/message";
 @Injectable({
-  providedIn: 'root',
+  providedIn: "root",
 })
 export class ChatService {
   private authService = inject(AuthService);
-  private hubUrl = 'http://localhost:5000/hubs/chat';
+  private hubUrl = "http://localhost:5000/hubs/chat";
   onlineUsers = signal<User[]>([]);
   currentOpenChat = signal<User | null>(null);
   chatMessages = signal<Message[]>([]);
   isLoading = signal<boolean>(true);
+  pageNumber = 2;
+
+  autoScrollEnable = signal<boolean>(true);
+  allMessagesLoaded = signal<boolean>(false); // Add this flag
+
+  // Add a getter for the flag
 
   private hubConnection?: HubConnection;
 
   startConnection(token: string, senderId?: string) {
     this.hubConnection = new HubConnectionBuilder()
-      .withUrl(`${this.hubUrl}?senderId=${senderId || ''}`, {
+      .withUrl(`${this.hubUrl}?senderId=${senderId || ""}`, {
         accessTokenFactory: () => token,
       })
       .withAutomaticReconnect()
@@ -31,24 +37,24 @@ export class ChatService {
     this.hubConnection
       .start()
       .then(() => {
-        console.log('Connection started');
+        console.log("Connection started");
       })
       .catch((err) => {
-        console.log('Connection or login error' + err);
+        console.log("Connection or login error" + err);
       });
 
-    this.hubConnection.on('Notify', (user: User) => {
+    this.hubConnection.on("Notify", (user: User) => {
       Notification.requestPermission().then((result) => {
-        if (result === 'granted') {
-          new Notification('Active now 🟠', {
-            body: user.fullName + 'is online now',
+        if (result === "granted") {
+          new Notification("Active now 🟠", {
+            body: user.fullName + "is online now",
             icon: user.profileImage,
           });
         }
       });
     });
 
-    this.hubConnection!.on('OnlineUsers', (user: User[]) => {
+    this.hubConnection!.on("OnlineUsers", (user: User[]) => {
       console.log(user);
       this.onlineUsers.update(() =>
         user.filter(
@@ -58,10 +64,10 @@ export class ChatService {
       );
     });
 
-    this.hubConnection!.on('NotifyTypingToUser', (senderUserName) => {
+    this.hubConnection!.on("NotifyTypingToUser", (senderUserName) => {
       this.onlineUsers.update((users) =>
         users.map((user) => {
-          console.log(user.userName)
+          console.log(user.userName);
           if (user.userName === senderUserName.toString()) {
             // Fix: Compare user.userName
             user.isTyping = true;
@@ -82,13 +88,18 @@ export class ChatService {
       }, 2000);
     });
 
-    this.hubConnection!.on('ReceiveMessageList', (message) => {
-      this.chatMessages.update((messages) => [...message, ...messages]);
-      this.isLoading.update(() => false);
+    this.hubConnection!.on("ReceiveMessageList", (message) => {
+      if (message.length === 0) {
+        this.allMessagesLoaded.set(true); // No more messages to load
+      } else {
+        this.isLoading.update(() => true);
+        this.chatMessages.update((messages) => [...message, ...messages]);
+        this.isLoading.update(() => false);
+      }
     });
 
-    this.hubConnection!.on('ReceiveNewMessage', (message: Message) => {
-      document.title = '(1) New Message';
+    this.hubConnection!.on("ReceiveNewMessage", (message: Message) => {
+      document.title = "(1) New Message";
       this.chatMessages.update((messages) => [...messages, message]);
     });
   }
@@ -102,27 +113,27 @@ export class ChatService {
   status(userName: string) {
     const currentChatUser = this.currentOpenChat();
     if (!currentChatUser) {
-      return 'ofline';
+      return "ofline";
     }
 
     const onlineUser = this.onlineUsers().find(
       (user) => user.userName === userName
     );
 
-    return onlineUser?.isTyping ? 'Typing...' : this.isUserOnline();
+    return onlineUser?.isTyping ? "Typing..." : this.isUserOnline();
   }
 
   isUserOnline() {
     let onlineUser = this.onlineUsers().find(
       (user) => user.userName === this.currentOpenChat()?.userName
     );
-    return onlineUser?.isOnline ? 'online' : this.currentOpenChat()!.userName;
+    return onlineUser?.isOnline ? "online" : this.currentOpenChat()!.userName;
   }
 
   loadMessages(pageNumber: number) {
-    this.chatMessages.set([]);
+    this.isLoading.update(() => true);
     this.hubConnection
-      ?.invoke('LoadMessages', this.currentOpenChat()?.id, pageNumber)
+      ?.invoke("LoadMessages", this.currentOpenChat()?.id, pageNumber)
       .then()
       .catch()
       .finally(() => {
@@ -144,12 +155,12 @@ export class ChatService {
     ]);
 
     this.hubConnection
-      ?.invoke('SendMessage', {
+      ?.invoke("SendMessage", {
         receiverId: this.currentOpenChat()?.id,
         content: message,
       })
       .then((id) => {
-        console.log('message send to', id);
+        console.log("message send to", id);
       })
       .catch((error) => {
         console.log(error);
@@ -158,9 +169,9 @@ export class ChatService {
 
   notifyTyping() {
     this.hubConnection
-      ?.invoke('NotifyTyping', this.currentOpenChat()?.userName)
+      ?.invoke("NotifyTyping", this.currentOpenChat()?.userName)
       .then((x) => {
-        console.log('Notify for ' + x);
+        console.log("Notify for " + x);
       })
       .catch((error) => {
         console.log(error);

@@ -93,6 +93,8 @@ namespace Server.Hubs
                 }
             }
 
+            await Task.Delay(1000);
+
             // Send the messages to the client
             await Clients.User(currentUser.Id).SendAsync("ReceiveMessageList", messages);
         }

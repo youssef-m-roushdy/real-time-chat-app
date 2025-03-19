@@ -1,13 +1,20 @@
-<div class="flex chat-box py-2 border-[20px] border-transparent flex-col">
+<div
+  class="flex chat-box py-2 border-[20px] border-transparent flex-col"
+  #chatBox
+>
   <div class="h-200">
-    @if (chatService.chatMessages().length > 5) {
+    @if (chatService.chatMessages().length > 5 &&
+    !chatService.allMessagesLoaded()) {
     <div class="text-center py-1 sticky top-0 w-full">
       <button
         class="text-gray-500 text-xs shadow px-5 py-2 rounded-full bg-gray-200 hover:text-gray-700 focus:outline-none"
+        (click)="loadMoreMessage()"
       >
         @if (chatService.isLoading()) {
-        <mat-spinner diameter="20" strokeWidth="3"></mat-spinner> Loading }@else
-        { Load More }
+        <div class="flex items-center gap-2">
+          <mat-spinner diameter="20" strokeWidth="3"></mat-spinner> Loading
+        </div>
+        } @else { Load More }
       </button>
     </div>
     } @for (item of chatService.chatMessages(); track item.id) { @if
@@ -17,7 +24,9 @@
         class="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex-shrink-0"
       >
         <img
-          [src]="chatService.currentOpenChat()?.profilePicture || 'unknownperson.svg'"
+          [src]="
+            chatService.currentOpenChat()?.profilePicture || 'unknownperson.svg'
+          "
           [alt]="chatService.currentOpenChat()?.fullName"
           class="rounded-full h-8 w-8"
         />
@@ -48,24 +57,23 @@
         class="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex-shrink-0"
       >
         <img
-          [src]="authService.currentLoggedUsser?.profileImage || 'unknownperson.svg'"
+          [src]="
+            authService.currentLoggedUsser?.profileImage || 'unknownperson.svg'
+          "
           [alt]="authService.currentLoggedUsser?.fullName"
           class="rounded-full h-8 w-8"
         />
       </div>
     </div>
-    }
- }@empty {
+    } }@empty {
     <div class="flex flex-col items-center justify-center h-full">
-        @if(chatService.isLoading()) {
-            <mat-spinner diameter="40" strokeWidth="3"></mat-spinner>
-        }@else {
-            <mat-icon class="text-gray-400 chat-icon">chat</mat-icon>
-            <h6 class="text-center text-gray-500">
-                No message yet
-            </h6>
-        }
+      @if(chatService.isLoading()) {
+      <mat-spinner diameter="40" strokeWidth="3"></mat-spinner>
+      }@else {
+      <mat-icon class="text-gray-400 chat-icon">chat</mat-icon>
+      <h6 class="text-center text-gray-500">No message yet</h6>
+      }
     </div>
-}
+    }
   </div>
 </div>

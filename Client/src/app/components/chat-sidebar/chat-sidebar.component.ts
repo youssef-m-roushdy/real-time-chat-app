@@ -31,6 +31,9 @@ export class ChatSidebarComponent implements OnInit{
   }
 
   openChatWindow(user:User) {
+    this.chatService.chatMessages.set([]);
+    this.chatService.allMessagesLoaded.set(false);
+    this.chatService.pageNumber = 2;
     this.chatService.currentOpenChat.set(user);
     this.chatService.loadMessages(1);
   }
