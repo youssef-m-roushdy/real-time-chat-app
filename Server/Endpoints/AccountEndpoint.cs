@@ -25,41 +25,53 @@ namespace Server.Endpoints
                                                                 [FromForm] string password, 
                                                                 [FromForm] IFormFile? profileImage) =>
             {
-                // Check if the user already exists
-                var userFromDb = await userManager.FindByEmailAsync(email);
-                if (userFromDb != null)
+                try
                 {
-                    return Results.BadRequest(Response<String>.Failure("User with this email already exists."));
+                    var userFromDb = await userManager.FindByEmailAsync(email);
+                    if (userFromDb != null)
+                    {
+                        return Results.BadRequest(Response<String>.Failure("User with this email already exists."));
+                    }
+
+                    if (profileImage is null)
+                    {
+                        return Results.BadRequest(Response<string>.Failure("Profile Image Is Required"));
+                    }
+
+                    var picture = await FileUploadService.Upload(profileImage);
+
+                    picture = $"{context.Request.Scheme}://{context.Request.Host}/uploads/{picture}";
+
+                    // Create a new user
+                    var user = new AppUser
+                    {
+                        FullName = fullName,
+                        UserName = userName,
+                        Email = email,
+                        ProfileImage = picture
+                    };
+
+
+                    // Attempt to create the user
+                    var result = await userManager.CreateAsync(user, password);
+                    if (!result.Succeeded)
+                    {
+                        // Return validation errors
+                        return Results.BadRequest(Response<String>.Failure(result.Errors.Select(x => x.Description).FirstOrDefault()!));
+                    }
+
+                    return Results.Ok(Response<String>.Success("", "User registered successfully."));
                 }
-
-                if(profileImage is null)
+                catch (InvalidOperationException ex)
                 {
-                    return Results.BadRequest(Response<string>.Failure("Profile Image Is Required"));
+                    return Results.BadRequest(Response<string>.Failure(ex.Message));
                 }
-
-                var picture = await FileUploadService.Upload(profileImage);
-
-                picture = $"{context.Request.Scheme}://{context.Request.Host}/uploads/{picture}";
-
-                // Create a new user
-                var user = new AppUser
+                catch (System.Exception)
                 {
-                    FullName = fullName,
-                    UserName = userName,
-                    Email = email,
-                    ProfileImage = picture
-                };
-
-
-                // Attempt to create the user
-                var result = await userManager.CreateAsync(user, password);
-                if (!result.Succeeded)
-                {
-                    // Return validation errors
-                    return Results.BadRequest(Response<String>.Failure(result.Errors.Select(x => x.Description).FirstOrDefault()!));
+                    return Results.StatusCode(StatusCodes.Status500InternalServerError, 
+                        Response<string>.Failure("An error occurred while registering the user."));
                 }
-
-                return Results.Ok(Response<String>.Success("", "User registered successfully."));
+                
             }).DisableAntiforgery();
 
             group.MapPost("/login", async (UserManager<AppUser> userManager, TokenService tokenService, [FromBody]LoginDto loginDto) => 

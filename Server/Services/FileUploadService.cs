@@ -9,6 +9,11 @@ namespace Server.Services
     {
         public static async Task<string> Upload(IFormFile file)
         {
+            if(file.OpenReadStream().Length > 2 * 1024 * 1024)
+            {
+                throw new InvalidOperationException("File size exceeds the limit of 2 MB.");
+            }
+
             var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
 
             if(!Directory.Exists(uploadFolder))
